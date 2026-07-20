@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="page-header" style="margin-bottom: 24px;">
+    <h1 style="margin:0; color:var(--primary); font-size:24px;">Gestión de Usuarios</h1>
+    <p style="margin:5px 0 0 0; color:var(--text-muted); font-size:14px;">Crea o elimina accesos al sistema Multiconsulta.</p>
+</div>
+
+<div style="display: grid; grid-template-columns: 1fr 2fr; gap: 24px;">
+    <!-- Crear Usuario -->
+    <div class="glass" style="padding: 24px; height: fit-content;">
+        <h3 style="margin: 0 0 16px 0; color: var(--primary); font-size: 16px;">
+            <i data-lucide="user-plus" style="width:18px;height:18px;margin-bottom:-2px;"></i> Nuevo Usuario
+        </h3>
+        <form id="form-usuario">
+            <div class="form-group" style="margin-bottom: 12px;">
+                <label>Nombre Completo</label>
+                <input type="text" id="nombre" required placeholder="Ej. Juan Pérez García">
+            </div>
+            <div class="form-group" style="margin-bottom: 12px;">
+                <label>Usuario (login)</label>
+                <input type="text" id="username" required placeholder="Ej. jperez">
+            </div>
+            <div class="form-group" style="margin-bottom: 12px;">
+                <label>Contraseña</label>
+                <input type="password" id="password" required placeholder="Mínimo 6 caracteres">
+            </div>
+            <div class="form-group" style="margin-bottom: 20px;">
+                <label>Rol</label>
+                <select id="rol" required>
+                    <option value="Usuario">Usuario (Solo Registro)</option>
+                    <option value="Admin">Administrador (Acceso Total)</option>
+                </select>
+            </div>
+            <button type="submit" class="btn" style="width: 100%; justify-content: center;">
+                <i data-lucide="user-plus" style="width:16px;height:16px;"></i> Crear Cuenta
+            </button>
+        </form>
+    </div>
+
+    <!-- Lista de Usuarios -->
+    <div class="glass" style="padding: 24px;">
+        <h3 style="margin: 0 0 16px 0; color: var(--primary); font-size: 16px;">
+            <i data-lucide="users" style="width:18px;height:18px;margin-bottom:-2px;"></i> Usuarios Activos
+        </h3>
+        <div class="table-container" style="overflow: auto; max-height: 400px;">
+            <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 13px;">
+                <thead>
+                    <tr style="border-bottom: 1px solid var(--border); background: var(--bg-card);">
+                        <th style="padding: 12px 10px; color:var(--text-muted); font-size:11px; text-transform:uppercase;">Usuario</th>
+                        <th style="padding: 12px 10px; color:var(--text-muted); font-size:11px; text-transform:uppercase;">Nombre Completo</th>
+                        <th style="padding: 12px 10px; color:var(--text-muted); font-size:11px; text-transform:uppercase;">Rol</th>
+                        <th style="padding: 12px 10px; text-align:right;"></th>
+                    </tr>
+                </thead>
+                <tbody id="tabla-usuarios"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+        cargarUsuarios();
+
+        document.getElementById('form-usuario').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const data = {
+                nombre:   document.getElementById('nombre').value,
+                username: document.getElementById('username').value,
+                password: document.getElementById('password').value,
+                rol:      document.getElementById('rol').value
+            };
+
+            try {
+                const req = await fetch('/api/usuarios', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(data)
+                });
+                const res = await req.json();
+                if (req.ok && res.success) {
+                    document.getElementById('form-usuario').reset();
+                    cargarUsuarios();
+                } else {
+                    alert(res.error || "Error al crear usuario");
+                }
+            } catch (err) {
+                alert("Error de red");
+            }
+        });
+    });
+
+    async function cargarUsuarios() {
+        const req   = await fetch('/api/usuarios');
+        const users = await req.json();
+        const tbody = document.getElementById('tabla-usuarios');
+        tbody.innerHTML = '';
+
+        users.forEach(u => {
+            const tr = document.createElement('tr');
+            tr.style.borderBottom = '1px solid rgba(255,255,255,0.05)';
+            tr.innerHTML = `
+                <td style="padding: 10px; font-weight:600; font-family:monospace; color:var(--primary);">${u.username}</td>
+                <td style="padding: 10px;">${u.nombre || '-'}</td>
+                <td style="padding: 10px;">
+                    <span style="background:${u.rol==='Admin'?'rgba(99,102,241,0.2)':'rgba(255,255,255,0.08)'}; color:${u.rol==='Admin'?'var(--primary)':'var(--text-muted)'}; padding:3px 8px; border-radius:4px; font-size:11px; font-weight:600;">${u.rol}</span>
+                </td>
+                <td style="padding: 10px; text-align:right;">
+                    <button onclick="borrarUsuario(${u.id})" class="btn btn-danger" style="padding:5px 10px; font-size:12px;">
+                        <i data-lucide="trash-2" style="width:13px;height:13px;"></i> Borrar
+                    </button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+        lucide.createIcons();
+    }
+
+    async function borrarUsuario(id) {
+        if (!confirm("¿Borrar este usuario?")) return;
+        const req = await fetch('/api/usuarios/' + id, { method: 'DELETE' });
+        const res = await req.json();
+        if (req.ok) cargarUsuarios();
+        else alert(res.error || "Error al borrar");
+    }
+</script>
+{% endblock %}

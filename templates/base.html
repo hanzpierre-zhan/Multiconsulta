@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multiconsulta</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        :root {
+            --bg-main: #0f172a;
+            --bg-card: #1e293b;
+            --primary: #6366f1;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --border: #334155;
+            --danger: #ef4444;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            display: flex;
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            width: 250px;
+            background-color: var(--bg-card);
+            border-right: 1px solid var(--border);
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .logo {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 40px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .nav-links {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            flex: 1;
+        }
+
+        .nav-links a {
+            text-decoration: none;
+            color: var(--text-muted);
+            padding: 12px 16px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+
+        .nav-links a:hover, .nav-links a.active {
+            background-color: rgba(99, 102, 241, 0.1);
+            color: var(--primary);
+        }
+
+        .user-profile {
+            margin-top: auto;
+            padding-top: 24px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .main-content {
+            flex: 1;
+            padding: 32px;
+            overflow-y: auto;
+        }
+
+        .glass {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 6px;
+            font-size: 13px;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%;
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            background: rgba(255,255,255,0.05);
+            color: var(--text-main);
+            font-family: inherit;
+            box-sizing: border-box;
+            transition: border-color 0.3s;
+        }
+
+        .form-group select option {
+            background-color: var(--bg-card);
+            color: var(--text-main);
+        }
+
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .btn {
+            background: var(--primary); 
+            color: white; 
+            border: none; 
+            padding: 10px 24px; 
+            border-radius: 6px; 
+            cursor: pointer; 
+            font-weight: 500; 
+            display:inline-flex; 
+            align-items:center; 
+            gap:8px;
+            font-family: inherit;
+        }
+        .btn-danger { background: var(--danger); }
+
+        .table-container::-webkit-scrollbar { height: 12px; width: 12px; }
+        .table-container::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); border-radius: 8px; }
+        .table-container::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.3); border-radius: 8px; }
+        .table-container::-webkit-scrollbar-thumb:hover { background: var(--primary); }
+
+        /* Sidebar Collapse Styles */
+        .sidebar {
+            transition: width 0.3s ease;
+        }
+        .sidebar.collapsed {
+            width: 80px;
+            padding: 24px 12px;
+        }
+        .sidebar.collapsed .logo-text,
+        .sidebar.collapsed .nav-text,
+        .sidebar.collapsed .user-details {
+            display: none;
+        }
+        .sidebar.collapsed .logo {
+            justify-content: center;
+        }
+        .sidebar.collapsed #toggle-sidebar {
+            margin: 0;
+            margin-top: 16px;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+        }
+        .sidebar.collapsed .nav-links a {
+            justify-content: center;
+            padding: 12px;
+        }
+        .sidebar.collapsed .nav-links a i {
+            margin: 0;
+        }
+        .sidebar.collapsed .user-profile {
+            flex-direction: column;
+            gap: 16px;
+            align-items: center;
+        }
+        .sidebar.collapsed .user-info {
+            justify-content: center;
+        }
+        .sidebar.collapsed .logout-btn {
+            margin: 0;
+        }
+    </style>
+</head>
+<body>
+    {% if current_user %}
+    <aside class="sidebar" id="main-sidebar">
+        <div class="logo">
+            <i data-lucide="headphones"></i> <span class="logo-text">Multiconsulta</span>
+            <button id="toggle-sidebar" style="background:none; border:none; color:var(--text-muted); cursor:pointer; margin-left:auto; padding:4px;">
+                <i data-lucide="chevron-left" id="toggle-icon"></i>
+            </button>
+        </div>
+        <ul class="nav-links">
+            <li><a href="/" class="{{ 'active' if request.path == '/' else '' }}" title="Incidencias"><i data-lucide="inbox"></i> <span class="nav-text">Incidencias</span></a></li>
+            {% if current_user.rol == 'Admin' %}
+            <li><a href="/admin/usuarios" class="{{ 'active' if request.path == '/admin/usuarios' else '' }}" title="Usuarios"><i data-lucide="users"></i> <span class="nav-text">Usuarios</span></a></li>
+            <li><a href="/admin/configuracion" class="{{ 'active' if request.path == '/admin/configuracion' else '' }}" title="Configuración"><i data-lucide="settings"></i> <span class="nav-text">Configuración</span></a></li>
+            {% endif %}
+        </ul>
+        
+        <div class="user-profile">
+            <div class="user-info">
+                <div style="min-width:32px; height:32px; border-radius:50%; background:var(--primary); display:flex; align-items:center; justify-content:center; font-weight:bold;">
+                    {{ current_user.username[0].upper() }}
+                </div>
+                <div class="user-details">
+                    <div style="font-weight:600; font-size:14px;">{{ current_user.username }}</div>
+                    <div style="font-size:12px; color:var(--text-muted);">{{ current_user.rol }}</div>
+                </div>
+            </div>
+            <a href="/logout" title="Cerrar Sesión" style="color:var(--text-muted);" class="logout-btn"><i data-lucide="log-out" style="width:18px;height:18px;"></i></a>
+        </div>
+    </aside>
+    {% endif %}
+
+    <main class="main-content" {% if not current_user %}style="padding:0; display:flex; align-items:center; justify-content:center;"{% endif %}>
+        {% block content %}{% endblock %}
+    </main>
+
+    <script>
+        lucide.createIcons();
+
+        // Lógica para contraer el sidebar
+        document.addEventListener("DOMContentLoaded", () => {
+            const sidebar = document.getElementById('main-sidebar');
+            const toggleBtn = document.getElementById('toggle-sidebar');
+            const toggleIcon = document.getElementById('toggle-icon');
+            
+            if (sidebar && toggleBtn) {
+                // Restaurar estado
+                if (localStorage.getItem('sidebar-collapsed') === 'true') {
+                    sidebar.classList.add('collapsed');
+                    if(toggleIcon) toggleIcon.setAttribute('data-lucide', 'chevron-right');
+                }
+                
+                toggleBtn.addEventListener('click', () => {
+                    sidebar.classList.toggle('collapsed');
+                    const isCollapsed = sidebar.classList.contains('collapsed');
+                    localStorage.setItem('sidebar-collapsed', isCollapsed);
+                    
+                    if(toggleIcon) {
+                        toggleIcon.setAttribute('data-lucide', isCollapsed ? 'chevron-right' : 'chevron-left');
+                        lucide.createIcons();
+                    }
+                });
+            }
+        });
+    </script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

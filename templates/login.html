@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="glass" style="width: 100%; max-width: 400px; padding: 40px; text-align: center; border-top: 4px solid var(--primary);">
+    <div style="margin-bottom: 32px;">
+        <i data-lucide="headphones" style="width:48px;height:48px;color:var(--primary);"></i>
+        <h2 style="margin: 16px 0 8px 0; color: var(--primary);">Multiconsulta</h2>
+        <p style="margin: 0; color: var(--text-muted); font-size: 14px;">Ingresa tus credenciales para continuar</p>
+    </div>
+
+    {% if error %}
+    <div style="background: rgba(239, 68, 68, 0.1); color: var(--danger); border: 1px solid var(--danger); padding: 12px; border-radius: 6px; margin-bottom: 24px; font-size: 14px;">
+        {{ error }}
+    </div>
+    {% endif %}
+
+    <form method="POST" action="/login" style="text-align: left;">
+        <div class="form-group" style="margin-bottom: 16px;">
+            <label>Usuario</label>
+            <input type="text" name="username" required placeholder="Tu nombre de usuario" autofocus>
+        </div>
+        <div class="form-group" style="margin-bottom: 24px;">
+            <label>Contraseña</label>
+            <input type="password" name="password" required placeholder="••••••••">
+        </div>
+        
+        <button type="submit" class="btn" style="width: 100%; justify-content: center; font-size: 16px; padding: 12px;">
+            Ingresar <i data-lucide="arrow-right" style="width:18px;height:18px;"></i>
+        </button>
+    </form>
+</div>
+{% endblock %}

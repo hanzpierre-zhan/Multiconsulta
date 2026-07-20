@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="page-header" style="margin-bottom: 24px;">
+    <h1 style="margin:0; color:var(--primary); font-size:24px;">Configuración de Desplegables</h1>
+    <p style="margin:5px 0 0 0; color:var(--text-muted); font-size:14px;">Añade o borra opciones para las listas del formulario (Contratas, Estados, etc).</p>
+</div>
+
+<div class="glass" style="padding: 24px; margin-bottom: 32px;">
+    <form id="form-opcion" style="display:flex; gap:16px; align-items:flex-end;">
+        <div class="form-group" style="flex:1;">
+            <label>Categoría</label>
+            <select id="categoria" required>
+                <option value="Departamento">Departamento</option>
+                <option value="Contrata">Contrata</option>
+                <option value="SLA">SLA</option>
+                <option value="Estado">Estado</option>
+            </select>
+        </div>
+        <div class="form-group" style="flex:2;">
+            <label>Nuevo Valor</label>
+            <input type="text" id="valor" required placeholder="Escribe la opción aquí...">
+        </div>
+        <button type="submit" class="btn" style="margin-bottom:2px;">
+            <i data-lucide="plus" style="width:16px;height:16px;"></i> Agregar Opción
+        </button>
+    </form>
+</div>
+
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 24px;" id="listas-contenedor">
+    <!-- Se llenará dinámicamente -->
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+        cargarListas();
+
+        document.getElementById('form-opcion').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const data = {
+                categoria: document.getElementById('categoria').value,
+                valor: document.getElementById('valor').value
+            };
+
+            const req = await fetch('/api/opciones', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(data)
+            });
+            const res = await req.json();
+            if (req.ok && res.success) {
+                document.getElementById('valor').value = '';
+                cargarListas();
+            } else {
+                alert("Error al guardar");
+            }
+        });
+    });
+
+    async function cargarListas() {
+        const req = await fetch('/api/opciones');
+        const data = await req.json();
+        
+        const contenedor = document.getElementById('listas-contenedor');
+        contenedor.innerHTML = '';
+
+        for (const [cat, opciones] of Object.entries(data)) {
+            const card = document.createElement('div');
+            card.className = 'glass';
+            card.style.padding = '20px';
+            
+            let html = `
+                <h3 style="margin:0 0 16px 0; color:var(--primary); font-size:15px; border-bottom:1px solid var(--border); padding-bottom:8px;">
+                    Lista: ${cat}
+                </h3>
+                <ul style="list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:8px;">
+            `;
+
+            opciones.forEach(op => {
+                html += `
+                    <li style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.02); padding:8px 12px; border-radius:6px; font-size:13px;">
+                        <span>${op.valor}</span>
+                        <button onclick="borrarOpcion(${op.id})" style="background:none; border:none; color:var(--danger); cursor:pointer;" title="Borrar">
+                            <i data-lucide="x" style="width:14px;height:14px;"></i>
+                        </button>
+                    </li>
+                `;
+            });
+
+            html += `</ul>`;
+            card.innerHTML = html;
+            contenedor.appendChild(card);
+        }
+        lucide.createIcons();
+    }
+
+    async function borrarOpcion(id) {
+        if(!confirm("¿Estás seguro de borrar esta opción?")) return;
+        const req = await fetch('/api/opciones/' + id, { method: 'DELETE' });
+        if(req.ok) {
+            cargarListas();
+        } else {
+            alert("Error al borrar");
+        }
+    }
+</script>
+{% endblock %}
