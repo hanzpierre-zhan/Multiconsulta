@@ -411,7 +411,9 @@ def init_db():
 
     db.session.commit()
 
+# Inicializar BD al importar el módulo (compatible con gunicorn y python directo)
+with app.app_context():
+    init_db()
+
 if __name__ == '__main__':
-    with app.app_context():
-        init_db()
     app.run(debug=True, port=5001)
