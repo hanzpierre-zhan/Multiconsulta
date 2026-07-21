@@ -10,7 +10,10 @@ from werkzeug.utils import secure_filename
 app = Flask(__name__)
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 db_path = os.path.join(BASE_DIR, "multiconsulta.db")
-app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{db_path}'
+database_url = os.environ.get('DATABASE_URL')
+if database_url and database_url.startswith("postgres://"):
+    database_url = database_url.replace("postgres://", "postgresql://", 1)
+app.config['SQLALCHEMY_DATABASE_URI'] = database_url or f'sqlite:///{db_path}'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SECRET_KEY'] = 'multiconsulta_secret_very_secure'
 
@@ -154,10 +157,31 @@ def api_incidencias():
         if 'evidencia_file' in request.files:
             file = request.files['evidencia_file']
             if file and file.filename != '':
-                filename = secure_filename(file.filename)
-                filename = f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{filename}"
-                file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-                evidencia_url = url_for('static', filename=f'uploads/{filename}')
+                import requests
+                import base64
+                
+                imgbb_api_key = os.environ.get('IMGBB_API_KEY')
+                if imgbb_api_key:
+                    # Subir a ImgBB para que no se borre en Render
+                    try:
+                        payload = {
+                            "key": imgbb_api_key,
+                            "image": base64.b64encode(file.read()).decode('utf-8')
+                        }
+                        res = requests.post("https://api.imgbb.com/1/upload", data=payload)
+                        if res.status_code == 200:
+                            evidencia_url = res.json()["data"]["url"]
+                    except Exception as e:
+                        print("Error subiendo a ImgBB:", e)
+                
+                # Si falló ImgBB o no hay API Key, lo guardamos localmente como fallback
+                if not evidencia_url:
+                    # Resetear el puntero del archivo por si ya se leyó
+                    file.seek(0)
+                    filename = secure_filename(file.filename)
+                    filename = f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{filename}"
+                    file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+                    evidencia_url = url_for('static', filename=f'uploads/{filename}')
 
         if not evidencia_url and data.get('evidencia_text'):
             evidencia_url = data.get('evidencia_text')
