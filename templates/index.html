@@ -64,8 +64,24 @@
                     <input type="datetime-local" id="fecha_ticket" required>
                 </div>
                 <div class="form-group">
+                    <label>Estado del Ticket</label>
+                    <select id="estado" required>
+                        <option value="">Seleccione...</option>
+                    </select>
+                </div>
+                <div class="form-group">
                     <label>Departamento</label>
                     <select id="departamento" required>
+                        <option value="">Seleccione...</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Ciudad</label>
+                    <input type="text" id="ciudad" placeholder="Ej. Arequipa">
+                </div>
+                <div class="form-group">
+                    <label>Site Name</label>
+                    <select id="site_name">
                         <option value="">Seleccione...</option>
                     </select>
                 </div>
@@ -82,12 +98,6 @@
                 <div class="form-group">
                     <label>SLA</label>
                     <select id="sla" required>
-                        <option value="">Seleccione...</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Estado del Ticket</label>
-                    <select id="estado" required>
                         <option value="">Seleccione...</option>
                     </select>
                 </div>
@@ -135,13 +145,15 @@
                 <tr style="border-bottom:1px solid var(--border); background:var(--bg-card); position:sticky; top:0; z-index:10;">
                     <th style="padding:10px 8px; white-space:nowrap;">Ticket</th>
                     <th style="padding:10px 8px; white-space:nowrap;">Fecha Ticket</th>
+                    <th style="padding:10px 8px; white-space:nowrap;">Estado</th>
                     <th style="padding:10px 8px; white-space:nowrap;">Gestor</th>
                     <th style="padding:10px 8px; white-space:nowrap;">Departamento</th>
+                    <th style="padding:10px 8px; white-space:nowrap;">Ciudad</th>
+                    <th style="padding:10px 8px; white-space:nowrap;">Site Name</th>
                     <th style="padding:10px 8px; min-width:220px;">Descripción</th>
                     <th style="padding:10px 8px; white-space:nowrap;">Técnico</th>
                     <th style="padding:10px 8px; white-space:nowrap;">Contrata</th>
                     <th style="padding:10px 8px; white-space:nowrap;">SLA</th>
-                    <th style="padding:10px 8px; white-space:nowrap;">Estado</th>
                     <th style="padding:10px 8px; white-space:nowrap;">Evidencia</th>
                     {% if current_user and current_user.rol == 'Admin' %}
                     <th style="padding:10px 8px; white-space:nowrap;">Acciones</th>
@@ -189,6 +201,8 @@
             formData.append('numero_ticket',    document.getElementById('numero_ticket').value);
             formData.append('fecha_ticket',      document.getElementById('fecha_ticket').value);
             formData.append('departamento',     document.getElementById('departamento').value);
+            formData.append('ciudad',           document.getElementById('ciudad').value);
+            formData.append('site_name',        document.getElementById('site_name').value);
             formData.append('descripcion',      document.getElementById('descripcion').value);
             formData.append('tecnico_asignado', document.getElementById('tecnico_asignado').value);
             formData.append('contrata',         document.getElementById('contrata').value);
@@ -236,6 +250,7 @@
             poblarSelect('contrata',     data.Contrata);
             poblarSelect('sla',          data.SLA);
             poblarSelect('estado',       data.Estado);
+            poblarSelect('site_name',    data['Site Name']);
         } catch (err) { console.error("Error opciones:", err); }
     }
 
@@ -276,15 +291,17 @@
                 tr.innerHTML = `
                     <td style="padding:9px 8px; font-weight:700; color:var(--primary); white-space:nowrap;">${i.numero_ticket}</td>
                     <td style="padding:9px 8px; color:var(--text-muted); white-space:nowrap; font-size:11px;">${i.fecha_ticket}</td>
+                    <td style="padding:9px 8px;">
+                        <span class="tag" style="background:${badge}; white-space:nowrap;">${i.estado}</span>
+                    </td>
                     <td style="padding:9px 8px; white-space:nowrap;">${i.gestor || '-'}</td>
                     <td style="padding:9px 8px; white-space:nowrap;">${i.departamento || '-'}</td>
+                    <td style="padding:9px 8px; white-space:nowrap;">${i.ciudad || '-'}</td>
+                    <td style="padding:9px 8px; white-space:nowrap;">${i.site_name || '-'}</td>
                     <td style="padding:9px 8px; max-width:240px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${i.descripcion}">${i.descripcion}</td>
                     <td style="padding:9px 8px; white-space:nowrap;">${i.tecnico_asignado || '-'}</td>
                     <td style="padding:9px 8px; white-space:nowrap;">${i.contrata || '-'}</td>
                     <td style="padding:9px 8px; white-space:nowrap; font-weight:600;">${i.sla || '-'}</td>
-                    <td style="padding:9px 8px;">
-                        <span class="tag" style="background:${badge}; white-space:nowrap;">${i.estado}</span>
-                    </td>
                     <td style="padding:9px 8px;">
                         ${i.evidencia
                             ? `<a href="${i.evidencia}" target="_blank" class="btn" style="padding:3px 8px; font-size:11px; background:rgba(99,102,241,0.2); color:var(--primary);">Ver</a>`
