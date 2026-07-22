@@ -7,7 +7,7 @@
         background: rgba(0,0,0,0.55); z-index:999; display:none;
     }
     .offcanvas-panel {
-        position: fixed; top:0; right:-450px; width:400px; max-width:100vw;
+        position: fixed; top:0; right:-450px; width:420px; max-width:100vw;
         height:100vh; background: var(--bg-card); z-index:1000;
         box-shadow: -6px 0 24px rgba(0,0,0,0.6);
         transition: right 0.3s ease;
@@ -41,29 +41,30 @@
             <input type="file" id="import-csv" accept=".csv" style="display:none;" onchange="importarCSV(this)">
         </label>
         {% endif %}
-        <button type="button" class="btn" style="padding:9px 16px; font-size:13px;" onclick="togglePanel(true)">
+        <button type="button" class="btn" style="padding:9px 16px; font-size:13px;" onclick="abrirPanelNuevo()">
             <i data-lucide="plus" style="width:16px;height:16px;"></i> Nueva Incidencia
         </button>
     </div>
 </div>
 
-<!-- BACKDROP -->
-<div id="form-overlay" class="offcanvas-overlay" onclick="togglePanel(false)"></div>
+<!-- BACKDROP (Sin onclick para NO cerrar al clicar afuera) -->
+<div id="form-overlay" class="offcanvas-overlay"></div>
 
 <!-- PANEL LATERAL DERECHO -->
 <div id="form-panel" class="offcanvas-panel">
     <div style="padding:18px 20px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; flex-shrink:0;">
-        <h3 style="margin:0; color:var(--primary); font-size:15px; display:flex; align-items:center; gap:8px;">
+        <h3 style="margin:0; color:var(--primary); font-size:15px; display:flex; align-items:center; gap:8px;" id="panel-title">
             <i data-lucide="plus-circle" style="width:17px;height:17px;"></i> Nueva Incidencia
         </h3>
         <button type="button" style="background:none; border:none; color:var(--text-muted); font-size:26px; cursor:pointer; line-height:1;" onclick="togglePanel(false)">&times;</button>
     </div>
     <div style="padding:16px 20px; overflow-y:auto; flex:1;">
         <form id="form-incidencia">
+            <input type="hidden" id="edit_id" value="">
             <div style="display:flex; flex-direction:column; gap:12px;">
                 <div class="form-group">
                     <label>Número de Ticket</label>
-                    <input type="text" id="numero_ticket" required placeholder="Ej. INC-2001">
+                    <input type="text" id="numero_ticket" required placeholder="Ej. INC-2001" onblur="buscarTicketExistente(this.value)">
                 </div>
                 <div class="form-group">
                     <label>Fecha y Hora del Ticket <span style="color:var(--text-muted); font-size:11px;">(la que indica el sistema del cliente)</span></label>
@@ -85,12 +86,14 @@
                     <label>Ciudad</label>
                     <input type="text" id="ciudad" placeholder="Ej. Arequipa">
                 </div>
+                
+                <!-- Site Name como campo de texto con sugerencias dinámicas -->
                 <div class="form-group">
                     <label>Site Name</label>
-                    <select id="site_name">
-                        <option value="">Seleccione...</option>
-                    </select>
+                    <input type="text" id="site_name" list="site_name_options" placeholder="Escribe o selecciona Site Name...">
+                    <datalist id="site_name_options"></datalist>
                 </div>
+
                 <div class="form-group">
                     <label>Técnico Asignado</label>
                     <input type="text" id="tecnico_asignado" placeholder="Nombre del Técnico">
@@ -116,13 +119,14 @@
                 <div class="form-group">
                     <label>Evidencia Fotográfica (Opcional)</label>
                     <input type="file" id="evidencia_file" accept="image/*" style="padding:6px;">
+                    <div id="evidencia_preview" style="font-size: 11px; margin-top: 4px; color: var(--primary);"></div>
                 </div>
             </div>
             <div style="margin-top:16px; display:flex; gap:8px; justify-content:flex-end;">
                 <button type="button" class="btn"
                     style="background:rgba(255,255,255,0.05); border:1px solid var(--border); color:var(--text-main);"
                     onclick="togglePanel(false)">Cancelar</button>
-                <button type="submit" class="btn">
+                <button type="submit" class="btn" id="btn-guardar">
                     <i data-lucide="save" style="width:15px;height:15px;"></i> Registrar
                 </button>
             </div>
@@ -161,9 +165,7 @@
                     <th style="padding:10px 8px; white-space:nowrap;">Contrata</th>
                     <th style="padding:10px 8px; white-space:nowrap;">SLA</th>
                     <th style="padding:10px 8px; white-space:nowrap;">Evidencia</th>
-                    {% if current_user and current_user.rol == 'Admin' %}
                     <th style="padding:10px 8px; white-space:nowrap;">Acciones</th>
-                    {% endif %}
                 </tr>
             </thead>
             <tbody id="tabla-incidencias"></tbody>
@@ -174,16 +176,28 @@
 
 {% block extra_js %}
 <script>
-    // Rol del usuario actual (desde servidor)
     const IS_ADMIN = {{ 'true' if current_user and current_user.rol == 'Admin' else 'false' }};
+    let todasLasIncidencias = [];
+    let opcionesSiteName = [];
 
-    // =========================================================
-    // PANEL (igual que AntonApp)
-    // =========================================================
     function togglePanel(show) {
         document.getElementById('form-panel').style.right     = show ? '0' : '-450px';
         document.getElementById('form-overlay').style.display = show ? 'block' : 'none';
-        if (!show) document.getElementById('form-incidencia').reset();
+        if (!show) resetFormulario();
+    }
+
+    function abrirPanelNuevo() {
+        resetFormulario();
+        document.getElementById('panel-title').innerHTML = '<i data-lucide="plus-circle" style="width:17px;height:17px;"></i> Nueva Incidencia';
+        document.getElementById('btn-guardar').innerHTML = '<i data-lucide="save" style="width:15px;height:15px;"></i> Registrar';
+        togglePanel(true);
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+    }
+
+    function resetFormulario() {
+        document.getElementById('form-incidencia').reset();
+        document.getElementById('edit_id').value = '';
+        document.getElementById('evidencia_preview').innerHTML = '';
     }
 
     function exportarCSV() {
@@ -217,18 +231,19 @@
         }
     }
 
-    // =========================================================
-    // INICIALIZACIÓN
-    // =========================================================
     document.addEventListener("DOMContentLoaded", function() {
         cargarOpciones();
         cargarIncidencias();
 
         document.getElementById('form-incidencia').addEventListener('submit', async function(e) {
             e.preventDefault();
-            const btn = e.target.querySelector('[type=submit]');
+            const btn = document.getElementById('btn-guardar');
             btn.disabled = true;
             btn.textContent = 'Guardando...';
+
+            const editId = document.getElementById('edit_id').value;
+            const method = editId ? 'PUT' : 'POST';
+            const url = editId ? '/api/incidencias/' + editId : '/api/incidencias';
 
             const formData = new FormData();
             formData.append('numero_ticket',    document.getElementById('numero_ticket').value);
@@ -246,19 +261,19 @@
             if (fileInput.files.length > 0) formData.append('evidencia_file', fileInput.files[0]);
 
             try {
-                const req = await fetch('/api/incidencias', { method: 'POST', body: formData });
+                const req = await fetch(url, { method: method, body: formData });
                 const res = await req.json();
                 if (req.ok && res.success) {
                     togglePanel(false);
                     cargarIncidencias();
                 } else {
-                    alert("Error: " + (res.error || "No se pudo registrar"));
+                    alert("Error: " + (res.error || "No se pudo guardar"));
                 }
             } catch (err) {
                 alert("Error de conexión.");
             } finally {
                 btn.disabled = false;
-                btn.innerHTML = '<i data-lucide="save" style="width:15px;height:15px;"></i> Registrar';
+                btn.innerHTML = '<i data-lucide="save" style="width:15px;height:15px;"></i> Guardar';
                 if (typeof lucide !== 'undefined') lucide.createIcons();
             }
         });
@@ -272,6 +287,30 @@
     });
 
     // =========================================================
+    // AUTO-COMPLETAR TICKET EXISTENTE (Mismo Ticket)
+    // =========================================================
+    function buscarTicketExistente(ticketNum) {
+        // Solo auto-completar si estamos creando uno nuevo
+        if (document.getElementById('edit_id').value !== '' || !ticketNum.trim()) return;
+        
+        const existente = todasLasIncidencias.find(i => i.numero_ticket.trim().toLowerCase() === ticketNum.trim().toLowerCase());
+        if (existente) {
+            // Precargar datos básicos
+            if (existente.departamento) document.getElementById('departamento').value = existente.departamento;
+            if (existente.ciudad) document.getElementById('ciudad').value = existente.ciudad;
+            if (existente.site_name) document.getElementById('site_name').value = existente.site_name;
+            if (existente.tecnico_asignado) document.getElementById('tecnico_asignado').value = existente.tecnico_asignado;
+            if (existente.contrata) document.getElementById('contrata').value = existente.contrata;
+            if (existente.sla) document.getElementById('sla').value = existente.sla;
+
+            // Dejar en blanco lo variable para el gestor
+            document.getElementById('estado').value = '';
+            document.getElementById('descripcion').value = '';
+            document.getElementById('evidencia_file').value = '';
+        }
+    }
+
+    // =========================================================
     // CARGAR OPCIONES
     // =========================================================
     async function cargarOpciones() {
@@ -283,8 +322,20 @@
             poblarSelect('contrata',     data.Contrata);
             poblarSelect('sla',          data.SLA);
             poblarSelect('estado',       data.Estado);
-            poblarSelect('site_name',    data['Site Name']);
+
+            poblarDatalist('site_name_options', data['Site Name']);
         } catch (err) { console.error("Error opciones:", err); }
+    }
+
+    function poblarDatalist(id, opciones) {
+        const datalist = document.getElementById(id);
+        if (!datalist || !opciones) return;
+        datalist.innerHTML = '';
+        opciones.forEach(function(op) {
+            const o = document.createElement('option');
+            o.value = op.valor;
+            datalist.appendChild(o);
+        });
     }
 
     function poblarSelect(id, opciones) {
@@ -298,16 +349,16 @@
     }
 
     // =========================================================
-    // CARGAR TABLA
+    // CARGAR TABLA Y EDITAR
     // =========================================================
     async function cargarIncidencias() {
         try {
             const req = await fetch('/api/incidencias');
-            const lista = await req.json();
+            todasLasIncidencias = await req.json();
             const tbody = document.getElementById('tabla-incidencias');
             tbody.innerHTML = '';
 
-            document.getElementById('contador').textContent = `(${lista.length} registros)`;
+            document.getElementById('contador').textContent = `(${todasLasIncidencias.length} registros)`;
 
             const colores = {
                 'Pendiente':        '#ef4444',
@@ -317,7 +368,7 @@
                 'Liquidado':        '#10b981'
             };
 
-            lista.forEach(function(i) {
+            todasLasIncidencias.forEach(function(i) {
                 const badge = colores[i.estado] || '#6b7280';
                 const tr = document.createElement('tr');
                 tr.style.borderBottom = '1px solid rgba(255,255,255,0.04)';
@@ -340,17 +391,49 @@
                             ? `<a href="${i.evidencia}" target="_blank" class="btn" style="padding:3px 8px; font-size:11px; background:rgba(99,102,241,0.2); color:var(--primary);">Ver</a>`
                             : '<span style="color:var(--text-muted);">-</span>'}
                     </td>
-                    ${IS_ADMIN ? `
-                    <td style="padding:9px 8px;">
-                        <button onclick="borrarIncidencia(${i.id})"
-                            style="background:rgba(239,68,68,0.15); color:#ef4444; border:1px solid rgba(239,68,68,0.4); border-radius:5px; padding:4px 9px; cursor:pointer; font-size:11px; font-weight:600; display:flex; align-items:center; gap:4px;">
-                            <i data-lucide="trash-2" style="width:12px;height:12px;"></i> Borrar
+                    <td style="padding:9px 8px; white-space:nowrap; display:flex; gap:4px;">
+                        <button onclick='editarIncidencia(${JSON.stringify(i).replace(/'/g, "&#39;")})'
+                            style="background:rgba(99,102,241,0.15); color:var(--primary); border:1px solid rgba(99,102,241,0.4); border-radius:5px; padding:4px 8px; cursor:pointer; font-size:11px; font-weight:600; display:flex; align-items:center; gap:4px;">
+                            <i data-lucide="edit-2" style="width:12px;height:12px;"></i> Editar
                         </button>
-                    </td>` : ''}
+                        ${IS_ADMIN ? `
+                        <button onclick="borrarIncidencia(${i.id})"
+                            style="background:rgba(239,68,68,0.15); color:#ef4444; border:1px solid rgba(239,68,68,0.4); border-radius:5px; padding:4px 8px; cursor:pointer; font-size:11px; font-weight:600; display:flex; align-items:center; gap:4px;">
+                            <i data-lucide="trash-2" style="width:12px;height:12px;"></i> Borrar
+                        </button>` : ''}
+                    </td>
                 `;
                 tbody.appendChild(tr);
             });
+            if (typeof lucide !== 'undefined') lucide.createIcons();
         } catch (err) { console.error("Error tabla:", err); }
+    }
+
+    function editarIncidencia(i) {
+        document.getElementById('edit_id').value = i.id;
+        document.getElementById('panel-title').innerHTML = '<i data-lucide="edit-2" style="width:17px;height:17px;"></i> Editar Incidencia';
+        document.getElementById('btn-guardar').innerHTML = '<i data-lucide="save" style="width:15px;height:15px;"></i> Actualizar';
+
+        document.getElementById('numero_ticket').value = i.numero_ticket || '';
+        document.getElementById('fecha_ticket').value = i.fecha_ticket ? i.fecha_ticket.replace(' ', 'T') : '';
+        document.getElementById('estado').value = i.estado || '';
+        document.getElementById('departamento').value = i.departamento || '';
+        document.getElementById('ciudad').value = i.ciudad || '';
+        document.getElementById('site_name').value = i.site_name || '';
+        document.getElementById('tecnico_asignado').value = i.tecnico_asignado || '';
+        document.getElementById('contrata').value = i.contrata || '';
+        document.getElementById('sla').value = i.sla || '';
+        document.getElementById('descripcion').value = i.descripcion || '';
+
+        const evDiv = document.getElementById('evidencia_preview');
+        if (i.evidencia) {
+            evDiv.innerHTML = `<a href="${i.evidencia}" target="_blank" style="color:var(--primary);">Ver evidencia actual</a> (Si subes otro archivo lo reemplazará)`;
+        } else {
+            evDiv.innerHTML = '';
+        }
+
+        togglePanel(true);
+        if (typeof lucide !== 'undefined') lucide.createIcons();
     }
 
     async function borrarIncidencia(id) {

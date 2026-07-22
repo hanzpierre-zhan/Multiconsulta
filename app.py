@@ -241,6 +241,62 @@ def api_incidencias():
     return jsonify([i.to_dict() for i in incidencias])
 
 
+@app.route('/api/incidencias/<int:id>', methods=['PUT', 'DELETE'])
+@login_required
+def api_incidencia_detail(id):
+    inc = Incidencia.query.get_or_404(id)
+    if request.method == 'DELETE':
+        if not (current_user and current_user.rol == 'Admin'):
+            return jsonify({'error': 'No autorizado'}), 403
+        db.session.delete(inc)
+        db.session.commit()
+        return jsonify({'success': True})
+
+    if request.method == 'PUT':
+        data = request.form
+        if 'evidencia_file' in request.files:
+            file = request.files['evidencia_file']
+            if file and file.filename != '':
+                import base64
+                imgbb_api_key = os.environ.get('IMGBB_API_KEY')
+                evidencia_url = None
+                if imgbb_api_key:
+                    try:
+                        payload = {"key": imgbb_api_key, "image": base64.b64encode(file.read()).decode('utf-8')}
+                        res = requests.post("https://api.imgbb.com/1/upload", data=payload)
+                        if res.status_code == 200: evidencia_url = res.json()["data"]["url"]
+                    except Exception: pass
+                if not evidencia_url:
+                    file.seek(0)
+                    filename = secure_filename(file.filename)
+                    filename = f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{filename}"
+                    file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+                    evidencia_url = url_for('static', filename=f'uploads/{filename}')
+                inc.evidencia = evidencia_url
+
+        fecha_ticket_str = data.get('fecha_ticket', '')
+        if fecha_ticket_str:
+            try: inc.fecha_ticket = datetime.strptime(fecha_ticket_str, '%Y-%m-%dT%H:%M')
+            except ValueError: pass
+
+        inc.numero_ticket = data.get('numero_ticket', inc.numero_ticket)
+        inc.departamento = data.get('departamento', inc.departamento)
+        inc.ciudad = data.get('ciudad', inc.ciudad)
+        inc.site_name = data.get('site_name', inc.site_name)
+        inc.descripcion = data.get('descripcion', inc.descripcion)
+        inc.tecnico_asignado = data.get('tecnico_asignado', inc.tecnico_asignado)
+        inc.contrata = data.get('contrata', inc.contrata)
+        inc.sla = data.get('sla', inc.sla)
+        inc.estado = data.get('estado', inc.estado)
+
+        try:
+            db.session.commit()
+            return jsonify({'success': True, 'incidencia': inc.to_dict()})
+        except Exception as e:
+            db.session.rollback()
+            return jsonify({'error': str(e)}), 400
+
+
 # --- EXPORTAR INCIDENCIAS (CSV) ---
 @app.route('/api/incidencias/export')
 @login_required
@@ -318,14 +374,7 @@ def api_incidencias_import():
         db.session.rollback()
         return jsonify({'error': str(e)}), 400
 
-# --- BORRAR INCIDENCIA (solo Admin) ---
-@app.route('/api/incidencias/<int:id>', methods=['DELETE'])
-@admin_required
-def api_incidencia_delete(id):
-    inc = Incidencia.query.get_or_404(id)
-    db.session.delete(inc)
-    db.session.commit()
-    return jsonify({'success': True})
+
 
 
 # --- API USUARIOS ---
