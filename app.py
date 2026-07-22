@@ -471,6 +471,26 @@ def migrate_db():
     """Aplica migraciones incrementales detectando el estado real de la BD."""
     from sqlalchemy import text
     if db.engine.name != 'sqlite':
+        with db.engine.connect() as conn:
+            try:
+                conn.execute(text("ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS nombre VARCHAR(100)"))
+                conn.commit()
+            except Exception:
+                pass
+            
+            for col, tipo in [
+                ('fecha_ticket',  'TIMESTAMP'),
+                ('fecha_captura', 'TIMESTAMP'),
+                ('ciudad',        'VARCHAR(100)'),
+                ('site_name',     'VARCHAR(150)'),
+                ('proyecto',      'VARCHAR(50)'),
+                ('servicio',      'VARCHAR(100)'),
+            ]:
+                try:
+                    conn.execute(text(f"ALTER TABLE incidencias ADD COLUMN IF NOT EXISTS {col} {tipo}"))
+                    conn.commit()
+                except Exception:
+                    pass
         return
     with db.engine.connect() as conn:
 
