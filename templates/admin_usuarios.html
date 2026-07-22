@@ -109,6 +109,9 @@
                     <span style="background:${u.rol==='Admin'?'rgba(99,102,241,0.2)':'rgba(255,255,255,0.08)'}; color:${u.rol==='Admin'?'var(--primary)':'var(--text-muted)'}; padding:3px 8px; border-radius:4px; font-size:11px; font-weight:600;">${u.rol}</span>
                 </td>
                 <td style="padding: 10px; text-align:right;">
+                    <button onclick="cambiarPasswordUsuario(${u.id}, '${u.username}')" class="btn" style="padding:5px 10px; font-size:12px; margin-right:5px; background:rgba(99,102,241,0.15); color:var(--primary); border:1px solid rgba(99,102,241,0.4);">
+                        <i data-lucide="key" style="width:13px;height:13px;"></i> Clave
+                    </button>
                     <button onclick="borrarUsuario(${u.id})" class="btn btn-danger" style="padding:5px 10px; font-size:12px;">
                         <i data-lucide="trash-2" style="width:13px;height:13px;"></i> Borrar
                     </button>
@@ -125,6 +128,27 @@
         const res = await req.json();
         if (req.ok) cargarUsuarios();
         else alert(res.error || "Error al borrar");
+    }
+
+    async function cambiarPasswordUsuario(id, username) {
+        const newPassword = prompt(`Ingrese nueva contraseña para el usuario ${username}:`);
+        if (!newPassword) return;
+        
+        try {
+            const req = await fetch('/api/usuarios/' + id + '/password', {
+                method: 'PUT',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({new_password: newPassword})
+            });
+            const res = await req.json();
+            if (req.ok && res.success) {
+                alert('Contraseña actualizada correctamente para ' + username);
+            } else {
+                alert(res.error || "Error al cambiar contraseña");
+            }
+        } catch (err) {
+            alert('Error de red');
+        }
     }
 </script>
 {% endblock %}

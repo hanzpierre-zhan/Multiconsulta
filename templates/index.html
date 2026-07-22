@@ -35,6 +35,12 @@
             onclick="exportarCSV()">
             <i data-lucide="download" style="width:15px;height:15px;"></i> Exportar
         </button>
+        {% if current_user and current_user.rol == 'Admin' %}
+        <label class="btn" style="background:rgba(239, 137, 34, 0.15); color:#ef8922; border:1px solid #ef8922; padding:9px 14px; font-size:13px; cursor:pointer; margin-bottom: 0;">
+            <i data-lucide="upload" style="width:15px;height:15px;"></i> Importar
+            <input type="file" id="import-csv" accept=".csv" style="display:none;" onchange="importarCSV(this)">
+        </label>
+        {% endif %}
         <button type="button" class="btn" style="padding:9px 16px; font-size:13px;" onclick="togglePanel(true)">
             <i data-lucide="plus" style="width:16px;height:16px;"></i> Nueva Incidencia
         </button>
@@ -182,6 +188,33 @@
 
     function exportarCSV() {
         window.location.href = '/api/incidencias/export';
+    }
+
+    async function importarCSV(input) {
+        if (!input.files || input.files.length === 0) return;
+        const file = input.files[0];
+        if (!confirm('¿Deseas importar datos desde ' + file.name + '?')) {
+            input.value = '';
+            return;
+        }
+        
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        try {
+            const req = await fetch('/api/incidencias/import', { method: 'POST', body: formData });
+            const res = await req.json();
+            if (req.ok && res.success) {
+                alert('Se importaron ' + res.count + ' registros exitosamente.');
+                cargarIncidencias();
+            } else {
+                alert('Error al importar: ' + (res.error || 'Verifica el formato del archivo'));
+            }
+        } catch (err) {
+            alert('Error de conexión al importar');
+        } finally {
+            input.value = '';
+        }
     }
 
     // =========================================================

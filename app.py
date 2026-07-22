@@ -129,6 +129,20 @@ def logout():
     session.clear()
     return redirect(url_for('login'))
 
+@app.route('/cambiar_password', methods=['GET', 'POST'])
+def cambiar_password():
+    if request.method == 'POST':
+        username = request.form.get('username')
+        old_password = request.form.get('old_password')
+        new_password = request.form.get('new_password')
+        user = Usuario.query.filter_by(username=username).first()
+        if user and check_password_hash(user.password_hash, old_password):
+            user.password_hash = generate_password_hash(new_password)
+            db.session.commit()
+            return render_template('login.html', error='Contraseña cambiada exitosamente. Por favor, inicia sesión con tu nueva contraseña.')
+        return render_template('cambiar_password.html', error='Usuario o contraseña actual inválidos')
+    return render_template('cambiar_password.html')
+
 @app.route('/')
 @login_required
 def index():
@@ -255,6 +269,55 @@ def export_incidencias():
         headers={'Content-Disposition': f'attachment; filename=incidencias_{datetime.now().strftime("%Y%m%d_%H%M")}.csv'}
     )
 
+@app.route('/api/incidencias/import', methods=['POST'])
+@admin_required
+def api_incidencias_import():
+    if 'file' not in request.files:
+        return jsonify({'error': 'No se envió ningún archivo'}), 400
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({'error': 'Archivo no seleccionado'}), 400
+    
+    try:
+        stream = StringIO(file.stream.read().decode("UTF8"), newline=None)
+        csv_input = csv.DictReader(stream)
+        user = Usuario.query.get(session['user_id'])
+        creador = user.username if user else 'Desconocido'
+        count = 0
+        for row in csv_input:
+            ticket = row.get('Ticket') or row.get('numero_ticket')
+            if not ticket: continue
+            
+            fecha_ticket_str = row.get('Fecha Ticket (Agente)') or row.get('fecha_ticket')
+            fecha_ticket_val = None
+            if fecha_ticket_str:
+                try:
+                    fecha_ticket_val = datetime.strptime(fecha_ticket_str, '%Y-%m-%d %H:%M')
+                except ValueError:
+                    pass
+
+            nueva = Incidencia(
+                numero_ticket    = ticket,
+                departamento     = row.get('Departamento') or row.get('departamento'),
+                ciudad           = row.get('Ciudad') or row.get('ciudad'),
+                site_name        = row.get('Site Name') or row.get('site_name'),
+                fecha_ticket     = fecha_ticket_val,
+                descripcion      = row.get('Descripcion') or row.get('descripcion') or 'Importado',
+                tecnico_asignado = row.get('Tecnico') or row.get('tecnico_asignado'),
+                contrata         = row.get('Contrata') or row.get('contrata'),
+                gestor           = row.get('Gestor/Registrador') or row.get('gestor') or creador,
+                sla              = row.get('SLA') or row.get('sla'),
+                estado           = row.get('Estado') or row.get('estado') or 'Pendiente',
+                usuario_creador  = creador
+            )
+            db.session.add(nueva)
+            count += 1
+        db.session.commit()
+        return jsonify({'success': True, 'count': count})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 400
+
 # --- BORRAR INCIDENCIA (solo Admin) ---
 @app.route('/api/incidencias/<int:id>', methods=['DELETE'])
 @admin_required
@@ -299,6 +362,18 @@ def api_usuario_delete(id):
         return jsonify({'error': 'No te puedes borrar a ti mismo'}), 400
     user = Usuario.query.get_or_404(id)
     db.session.delete(user)
+    db.session.commit()
+    return jsonify({'success': True})
+
+@app.route('/api/usuarios/<int:id>/password', methods=['PUT'])
+@admin_required
+def api_usuario_password(id):
+    data = request.json
+    new_password = data.get('new_password')
+    if not new_password:
+        return jsonify({'error': 'Contraseña requerida'}), 400
+    user = Usuario.query.get_or_404(id)
+    user.password_hash = generate_password_hash(new_password)
     db.session.commit()
     return jsonify({'success': True})
 
