@@ -335,6 +335,8 @@ def api_delete_opciones(id):
 def migrate_db():
     """Aplica migraciones incrementales detectando el estado real de la BD."""
     from sqlalchemy import text
+    if db.engine.name != 'sqlite':
+        return
     with db.engine.connect() as conn:
 
         # 1. Agregar columna 'nombre' a usuarios si no existe
