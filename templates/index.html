@@ -71,6 +71,18 @@
                     <input type="datetime-local" id="fecha_ticket" required>
                 </div>
                 <div class="form-group">
+                    <label>Proyecto</label>
+                    <select id="proyecto" required>
+                        <option value="">Seleccione...</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Servicio</label>
+                    <select id="servicio" required>
+                        <option value="">Seleccione...</option>
+                    </select>
+                </div>
+                <div class="form-group">
                     <label>Estado del Ticket</label>
                     <select id="estado" required>
                         <option value="">Seleccione...</option>
@@ -155,6 +167,8 @@
                 <tr style="border-bottom:1px solid var(--border); background:var(--bg-card); position:sticky; top:0; z-index:10;">
                     <th style="padding:10px 8px; white-space:nowrap;">Ticket</th>
                     <th style="padding:10px 8px; white-space:nowrap;">Fecha Ticket</th>
+                    <th style="padding:10px 8px; white-space:nowrap;">Proyecto</th>
+                    <th style="padding:10px 8px; white-space:nowrap;">Servicio</th>
                     <th style="padding:10px 8px; white-space:nowrap;">Estado</th>
                     <th style="padding:10px 8px; white-space:nowrap;">Gestor</th>
                     <th style="padding:10px 8px; white-space:nowrap;">Departamento</th>
@@ -248,6 +262,8 @@
             const formData = new FormData();
             formData.append('numero_ticket',    document.getElementById('numero_ticket').value);
             formData.append('fecha_ticket',      document.getElementById('fecha_ticket').value);
+            formData.append('proyecto',         document.getElementById('proyecto').value);
+            formData.append('servicio',         document.getElementById('servicio').value);
             formData.append('departamento',     document.getElementById('departamento').value);
             formData.append('ciudad',           document.getElementById('ciudad').value);
             formData.append('site_name',        document.getElementById('site_name').value);
@@ -297,6 +313,8 @@
         if (existente) {
             // Precargar datos básicos
             if (existente.departamento) document.getElementById('departamento').value = existente.departamento;
+            if (existente.proyecto) document.getElementById('proyecto').value = existente.proyecto;
+            if (existente.servicio) document.getElementById('servicio').value = existente.servicio;
             if (existente.ciudad) document.getElementById('ciudad').value = existente.ciudad;
             if (existente.site_name) document.getElementById('site_name').value = existente.site_name;
             if (existente.tecnico_asignado) document.getElementById('tecnico_asignado').value = existente.tecnico_asignado;
@@ -319,6 +337,8 @@
             if (!req.ok) return;
             const data = await req.json();
             poblarSelect('departamento', data.Departamento);
+            poblarSelect('proyecto',     data.Proyecto);
+            poblarSelect('servicio',     data.Servicio);
             poblarSelect('contrata',     data.Contrata);
             poblarSelect('sla',          data.SLA);
             poblarSelect('estado',       data.Estado);
@@ -375,6 +395,8 @@
                 tr.innerHTML = `
                     <td style="padding:9px 8px; font-weight:700; color:var(--primary); white-space:nowrap;">${i.numero_ticket}</td>
                     <td style="padding:9px 8px; color:var(--text-muted); white-space:nowrap; font-size:11px;">${i.fecha_ticket}</td>
+                    <td style="padding:9px 8px; white-space:nowrap;">${i.proyecto || '-'}</td>
+                    <td style="padding:9px 8px; white-space:nowrap;">${i.servicio || '-'}</td>
                     <td style="padding:9px 8px;">
                         <span class="tag" style="background:${badge}; white-space:nowrap;">${i.estado}</span>
                     </td>
@@ -416,6 +438,8 @@
 
         document.getElementById('numero_ticket').value = i.numero_ticket || '';
         document.getElementById('fecha_ticket').value = i.fecha_ticket ? i.fecha_ticket.replace(' ', 'T') : '';
+        document.getElementById('proyecto').value = i.proyecto || '';
+        document.getElementById('servicio').value = i.servicio || '';
         document.getElementById('estado').value = i.estado || '';
         document.getElementById('departamento').value = i.departamento || '';
         document.getElementById('ciudad').value = i.ciudad || '';

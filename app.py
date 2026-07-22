@@ -62,6 +62,8 @@ class Incidencia(db.Model):
     estado           = db.Column(db.String(50), nullable=False, default='Pendiente')
     evidencia        = db.Column(db.String(255), nullable=True)
     usuario_creador  = db.Column(db.String(50), nullable=True)
+    proyecto         = db.Column(db.String(50), nullable=True)
+    servicio         = db.Column(db.String(100), nullable=True)
 
     def to_dict(self):
         return {
@@ -79,7 +81,9 @@ class Incidencia(db.Model):
             'sla': self.sla,
             'estado': self.estado,
             'evidencia': self.evidencia,
-            'usuario_creador': self.usuario_creador
+            'usuario_creador': self.usuario_creador,
+            'proyecto': self.proyecto,
+            'servicio': self.servicio
         }
 
 
@@ -227,7 +231,9 @@ def api_incidencias():
             sla              = data.get('sla'),
             estado           = data.get('estado', 'Pendiente'),
             evidencia        = evidencia_url,
-            usuario_creador  = creador
+            usuario_creador  = creador,
+            proyecto         = data.get('proyecto'),
+            servicio         = data.get('servicio')
         )
         db.session.add(nueva)
         try:
@@ -288,6 +294,8 @@ def api_incidencia_detail(id):
         inc.contrata = data.get('contrata', inc.contrata)
         inc.sla = data.get('sla', inc.sla)
         inc.estado = data.get('estado', inc.estado)
+        inc.proyecto = data.get('proyecto', inc.proyecto)
+        inc.servicio = data.get('servicio', inc.servicio)
 
         try:
             db.session.commit()
@@ -305,7 +313,7 @@ def export_incidencias():
     si = StringIO()
     writer = csv.writer(si)
     writer.writerow([
-        'Ticket', 'Fecha Ticket (Agente)', 'Estado', 'Fecha Captura (Sistema)',
+        'Ticket', 'Fecha Ticket (Agente)', 'Proyecto', 'Servicio', 'Estado', 'Fecha Captura (Sistema)',
         'Gestor/Registrador', 'Departamento', 'Ciudad', 'Site Name', 'Descripcion',
         'Tecnico', 'Contrata', 'SLA'
     ])
@@ -313,6 +321,7 @@ def export_incidencias():
         writer.writerow([
             i.numero_ticket,
             i.fecha_ticket.strftime('%Y-%m-%d %H:%M') if i.fecha_ticket else '',
+            i.proyecto or '', i.servicio or '',
             i.estado,
             i.fecha_captura.strftime('%Y-%m-%d %H:%M') if i.fecha_captura else '',
             i.gestor, i.departamento, i.ciudad or '', i.site_name or '',
@@ -364,7 +373,9 @@ def api_incidencias_import():
                 gestor           = row.get('Gestor/Registrador') or row.get('gestor') or creador,
                 sla              = row.get('SLA') or row.get('sla'),
                 estado           = row.get('Estado') or row.get('estado') or 'Pendiente',
-                usuario_creador  = creador
+                usuario_creador  = creador,
+                proyecto         = row.get('Proyecto') or row.get('proyecto'),
+                servicio         = row.get('Servicio') or row.get('servicio')
             )
             db.session.add(nueva)
             count += 1
@@ -440,7 +451,7 @@ def api_opciones():
         return jsonify({'success': True, 'opcion': nueva.to_dict()})
 
     todas    = OpcionDesplegable.query.all()
-    resultado = {'Departamento': [], 'Contrata': [], 'SLA': [], 'Estado': [], 'Site Name': []}
+    resultado = {'Departamento': [], 'Contrata': [], 'SLA': [], 'Estado': [], 'Site Name': [], 'Proyecto': [], 'Servicio': []}
     for op in todas:
         if op.categoria in resultado:
             resultado[op.categoria].append(op.to_dict())
@@ -509,7 +520,9 @@ def migrate_db():
                     sla              VARCHAR(50),
                     estado           VARCHAR(50)  NOT NULL,
                     evidencia        VARCHAR(255),
-                    usuario_creador  VARCHAR(50)
+                    usuario_creador  VARCHAR(50),
+                    proyecto         VARCHAR(50),
+                    servicio         VARCHAR(100)
                 )
             """))
             conn.execute(text(f"""
@@ -532,6 +545,8 @@ def migrate_db():
                 ('fecha_captura', 'DATETIME'),
                 ('ciudad',        'VARCHAR(100)'),
                 ('site_name',     'VARCHAR(150)'),
+                ('proyecto',      'VARCHAR(50)'),
+                ('servicio',      'VARCHAR(100)'),
             ]:
                 if col not in existing_cols:
                     try:
@@ -568,7 +583,10 @@ def init_db():
             ('Contrata','Satelecom'),('Contrata','Cobra'),('Contrata','Nastel'),
             ('SLA','8HRS'),('SLA','16HRS'),('SLA','48HRS'),
             ('Estado','Pendiente'),('Estado','Asignado'),('Estado','Parada de Reloj'),
-            ('Estado','Cierre Operativo'),('Estado','Liquidado')
+            ('Estado','Cierre Operativo'),('Estado','Liquidado'),
+            ('Proyecto','FLM'),('Proyecto','PEXT'),
+            ('Servicio','PREVENTIVO'),('Servicio','CORRECTIVO'),('Servicio','PREDICTIVO'),
+            ('Servicio','AVAST DE COMBUSTIBLE'),('Servicio','ADICIONALES')
         ]
         for cat, val in opciones_defecto:
             db.session.add(OpcionDesplegable(categoria=cat, valor=val))
