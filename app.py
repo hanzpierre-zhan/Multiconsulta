@@ -451,7 +451,7 @@ def api_opciones():
         return jsonify({'success': True, 'opcion': nueva.to_dict()})
 
     todas    = OpcionDesplegable.query.all()
-    resultado = {'Departamento': [], 'Contrata': [], 'SLA': [], 'Estado': [], 'Site Name': [], 'Proyecto': [], 'Servicio': []}
+    resultado = {'Departamento': [], 'Contrata': [], 'SLA': [], 'Estado': [], 'Proyecto': [], 'Servicio': []}
     for op in todas:
         if op.categoria in resultado:
             resultado[op.categoria].append(op.to_dict())

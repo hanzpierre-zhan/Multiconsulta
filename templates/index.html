@@ -99,11 +99,9 @@
                     <input type="text" id="ciudad" placeholder="Ej. Arequipa">
                 </div>
                 
-                <!-- Site Name como campo de texto con sugerencias dinámicas -->
                 <div class="form-group">
                     <label>Site Name</label>
-                    <input type="text" id="site_name" list="site_name_options" placeholder="Escribe o selecciona Site Name...">
-                    <datalist id="site_name_options"></datalist>
+                    <input type="text" id="site_name" placeholder="Escribe Site Name...">
                 </div>
 
                 <div class="form-group">
@@ -342,8 +340,6 @@
             poblarSelect('contrata',     data.Contrata);
             poblarSelect('sla',          data.SLA);
             poblarSelect('estado',       data.Estado);
-
-            poblarDatalist('site_name_options', data['Site Name']);
         } catch (err) { console.error("Error opciones:", err); }
     }
 
