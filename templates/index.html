@@ -127,8 +127,8 @@
                                color:var(--text-main); border-radius:6px; box-sizing:border-box; font-family:inherit; resize:vertical;"></textarea>
                 </div>
                 <div class="form-group">
-                    <label>Evidencia Fotográfica (Opcional)</label>
-                    <input type="file" id="evidencia_file" accept="image/*" style="padding:6px;">
+                    <label>Evidencia Fotográfica (Hasta 5 fotos, Opcional)</label>
+                    <input type="file" id="evidencia_file" accept="image/*" multiple style="padding:6px;">
                     <div id="evidencia_preview" style="font-size: 11px; margin-top: 4px; color: var(--primary);"></div>
                 </div>
             </div>
@@ -272,7 +272,12 @@
             formData.append('estado',           document.getElementById('estado').value);
 
             const fileInput = document.getElementById('evidencia_file');
-            if (fileInput.files.length > 0) formData.append('evidencia_file', fileInput.files[0]);
+            if (fileInput.files.length > 0) {
+                const maxFiles = Math.min(fileInput.files.length, 5);
+                for (let f = 0; f < maxFiles; f++) {
+                    formData.append('evidencia_files', fileInput.files[f]);
+                }
+            }
 
             try {
                 const req = await fetch(url, { method: method, body: formData });
@@ -364,6 +369,18 @@
         });
     }
 
+    function renderEvidenciaLinks(evidenciaStr) {
+        if (!evidenciaStr) return '<span style="color:var(--text-muted);">-</span>';
+        const urls = evidenciaStr.split(',').map(u => u.trim()).filter(Boolean);
+        if (urls.length === 0) return '<span style="color:var(--text-muted);">-</span>';
+        if (urls.length === 1) {
+            return `<a href="${urls[0]}" target="_blank" class="btn" style="padding:3px 8px; font-size:11px; background:rgba(99,102,241,0.2); color:var(--primary);">Ver (1)</a>`;
+        }
+        return `<div style="display:flex; gap:3px; flex-wrap:wrap;">` +
+            urls.map((url, idx) => `<a href="${url}" target="_blank" class="btn" style="padding:2px 6px; font-size:10px; background:rgba(99,102,241,0.2); color:var(--primary);" title="Foto ${idx+1}">📷 ${idx+1}</a>`).join('') +
+            `</div>`;
+    }
+
     // =========================================================
     // CARGAR TABLA Y EDITAR
     // =========================================================
@@ -405,9 +422,7 @@
                     <td style="padding:9px 8px; white-space:nowrap;">${i.contrata || '-'}</td>
                     <td style="padding:9px 8px; white-space:nowrap; font-weight:600;">${i.sla || '-'}</td>
                     <td style="padding:9px 8px;">
-                        ${i.evidencia
-                            ? `<a href="${i.evidencia}" target="_blank" class="btn" style="padding:3px 8px; font-size:11px; background:rgba(99,102,241,0.2); color:var(--primary);">Ver</a>`
-                            : '<span style="color:var(--text-muted);">-</span>'}
+                        ${renderEvidenciaLinks(i.evidencia)}
                     </td>
                     <td style="padding:9px 8px; white-space:nowrap; display:flex; gap:4px;">
                         <button onclick='editarIncidencia(${JSON.stringify(i).replace(/'/g, "&#39;")})'
@@ -447,7 +462,9 @@
 
         const evDiv = document.getElementById('evidencia_preview');
         if (i.evidencia) {
-            evDiv.innerHTML = `<a href="${i.evidencia}" target="_blank" style="color:var(--primary);">Ver evidencia actual</a> (Si subes otro archivo lo reemplazará)`;
+            const urls = i.evidencia.split(',').map(u => u.trim()).filter(Boolean);
+            const links = urls.map((url, idx) => `<a href="${url}" target="_blank" style="color:var(--primary); margin-right:6px;">Foto ${idx+1}</a>`).join('');
+            evDiv.innerHTML = `<div style="margin-top:2px;">Evidencias actuales (${urls.length}): ${links}</div><div style="font-size:10px; color:var(--text-muted);">(Si subes nuevos archivos reemplazarán las fotos actuales)</div>`;
         } else {
             evDiv.innerHTML = '';
         }
