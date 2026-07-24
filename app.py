@@ -252,7 +252,7 @@ def api_incidencias():
 def api_incidencia_detail(id):
     inc = Incidencia.query.get_or_404(id)
     if request.method == 'DELETE':
-        if not (current_user and current_user.rol == 'Admin'):
+        if session.get('user_rol') != 'Admin':
             return jsonify({'error': 'No autorizado'}), 403
         db.session.delete(inc)
         db.session.commit()
